@@ -75,6 +75,26 @@ services:
       retries: 5
       start_period: 10s
 
+  pgadmin:
+    image: dpage/pgadmin4:9.8
+    container_name: sub2api-pgadmin-dev
+    restart: unless-stopped
+    depends_on:
+      postgres:
+        condition: service_healthy
+    ports:
+      - "${BIND_HOST:-127.0.0.1}:${PGADMIN_PORT:-5050}:80"
+    volumes:
+      - ./pgadmin_data:/var/lib/pgadmin
+      - ./pgadmin/servers.json:/pgadmin4/servers.json:ro
+    environment:
+      - PGADMIN_DEFAULT_EMAIL=${PGADMIN_DEFAULT_EMAIL:-pgadmin@sub2api.dev}
+      - PGADMIN_DEFAULT_PASSWORD=${PGADMIN_DEFAULT_PASSWORD:?PGADMIN_DEFAULT_PASSWORD is required}
+      - PGADMIN_CONFIG_SERVER_MODE=False
+      - PGADMIN_CONFIG_MASTER_PASSWORD_REQUIRED=False
+    networks:
+      - sub2api-network
+
   redis:
     image: redis:8-alpine
     container_name: sub2api-redis-dev
@@ -99,6 +119,22 @@ services:
       timeout: 5s
       retries: 5
       start_period: 5s
+
+  redis-commander:
+    image: ghcr.io/joeferner/redis-commander:latest
+    container_name: sub2api-redis-commander-dev
+    restart: unless-stopped
+    depends_on:
+      redis:
+        condition: service_healthy
+    ports:
+      - "${BIND_HOST:-127.0.0.1}:${REDIS_COMMANDER_PORT:-5540}:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379:${REDIS_DB:-0}:${REDIS_PASSWORD:-}
+      - HTTP_USER=${REDIS_COMMANDER_USER:-admin}
+      - HTTP_PASSWORD=${REDIS_COMMANDER_PASSWORD:?REDIS_COMMANDER_PASSWORD is required}
+    networks:
+      - sub2api-network
 
 networks:
   sub2api-network:
